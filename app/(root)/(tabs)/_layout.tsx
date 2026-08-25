@@ -1,14 +1,37 @@
-import { useAuth } from "@clerk/expo";
-import { Redirect, Slot } from "expo-router";
-// import { useUserSync } from "@/hooks/useUserSync";
+import { useUserStore } from "@/store/user-store";
+import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 
-export default function RootLayout() {
-  const { isSignedIn, isLoaded } = useAuth();
+export default function TabsLayout() {
+  const isAdmin = useUserStore((state) => state.isAdmin);
 
-  //   useUserSync();
+  return (
+    <NativeTabs>
+      <NativeTabs.Trigger name="index">
+        <Icon sf="house.fill" />
+        <Label>Home</Label>
+      </NativeTabs.Trigger>
 
-  if (!isLoaded) return null;
-  if (!isSignedIn) return <Redirect href="/sign-in" />;
+      <NativeTabs.Trigger name="search">
+        <Icon sf="magnifyingglass" />
+        <Label>Search</Label>
+      </NativeTabs.Trigger>
 
-  return <Slot />;
+      {isAdmin && (
+        <NativeTabs.Trigger name="create">
+          <Icon sf="plus.circle.fill" />
+          <Label>Add Property</Label>
+        </NativeTabs.Trigger>
+      )}
+
+      <NativeTabs.Trigger name="saved">
+        <Icon sf="heart.fill" />
+        <Label>Saved</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="profile">
+        <Icon sf="person.fill" />
+        <Label>Profile</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
 }

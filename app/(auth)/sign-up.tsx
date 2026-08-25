@@ -191,8 +191,8 @@ export default function SignUp() {
         )}
 
         <TouchableOpacity
-          // onPress={onSignUpPress}
-          // disabled={isLoading}
+          onPress={onSignUpPress}
+          disabled={isLoading}
           className="w-full bg-blue-600 py-4 rounded-xl items-center mb-4"
         >
           {isLoading ? (
