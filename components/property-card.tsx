@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/skeleton";
 import { useSavedProperty } from "@/hooks/use-saved-property";
 import { formatPrice } from "@/lib/utils";
 import { Property } from "@/types";
@@ -35,7 +36,11 @@ export default function PropertyCard({
     >
       {/* Image */}
       <Image
-        source={{ uri: property.images[0] }}
+        source={
+          property.images.length > 0
+            ? { uri: property.images[0] }
+            : require("@/assets/images/kribb.png")
+        }
         className="w-28 h-28"
         resizeMode="cover"
       />
@@ -100,3 +105,14 @@ export default function PropertyCard({
     </TouchableOpacity>
   );
 }
+
+export const PropertyCardSkeleton = () => (
+  <View className="flex-row items-center bg-white rounded-2xl p-3 mb-3 gap-3">
+    <Skeleton width={80} height={80} borderRadius={12} />
+    <View className="flex-1 gap-2">
+      <Skeleton width="80%" height={14} />
+      <Skeleton width="50%" height={12} />
+      <Skeleton width="40%" height={12} />
+    </View>
+  </View>
+);

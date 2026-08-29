@@ -1,15 +1,16 @@
+import { Skeleton } from "@/components/skeleton";
+import { formatPrice } from "@/lib/utils";
+import { Property } from "@/types";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Image, Text, TouchableOpacity, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { Property } from "@/types";
-import { formatPrice } from "@/lib/utils";
 
 export default function FeaturedCard({ property }: { property: Property }) {
   const router = useRouter();
 
   return (
     <TouchableOpacity
-    //   onPress={() => router.push(`/(root)/property/${property.id}`)}
+      //   onPress={() => router.push(`/(root)/property/${property.id}`)}
       className="w-72 mr-4 rounded-3xl overflow-hidden bg-white"
       style={{
         shadowColor: "#000",
@@ -22,7 +23,11 @@ export default function FeaturedCard({ property }: { property: Property }) {
     >
       {/* Image */}
       <Image
-        source={{ uri: property.images[0] }}
+        source={
+          property.images.length > 0
+            ? { uri: property.images[0] }
+            : require("@/assets/images/kribb.png")
+        }
         className="w-full h-44"
         resizeMode="cover"
       />
@@ -77,3 +82,13 @@ export default function FeaturedCard({ property }: { property: Property }) {
     </TouchableOpacity>
   );
 }
+
+export const FeaturedCardSkeleton = () => (
+  <View className="mr-4" style={{ width: 220 }}>
+    <Skeleton width={220} height={140} borderRadius={16} />
+    <View className="mt-2 gap-1">
+      <Skeleton width={160} height={14} />
+      <Skeleton width={100} height={12} />
+    </View>
+  </View>
+);

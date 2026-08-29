@@ -1,20 +1,20 @@
-import FeaturedCard from "@/components/featured-card";
-import PropertyCard from "@/components/property-card";
+import FeaturedCard, { FeaturedCardSkeleton } from "@/components/featured-card";
+import PropertyCard, { PropertyCardSkeleton } from "@/components/property-card";
 import { supabase } from "@/lib/supabase";
 import { Property } from "@/types";
 import { useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+type RecommendedItem = Property | { id: string; isSkeleton: true };
+
+const skeletonData: RecommendedItem[] = Array.from({ length: 4 }, (_, i) => ({
+  id: `skeleton-${i}`,
+  isSkeleton: true,
+}));
 
 const HomeScreen = () => {
   const { user } = useUser();
@@ -22,39 +22,68 @@ const HomeScreen = () => {
 
   const [featured, setFeatured] = useState<Property[]>([]);
   const [recommended, setRecommended] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fetchingRecommended, setFetchingRecommended] = useState(false);
+  const [fetchingFeatured, setFetchingFeatured] = useState(false);
+  const [featuredError, setFeaturedError] = useState("");
+  const [recommendedError, setRecommendedError] = useState("");
 
   useFocusEffect(
     useCallback(() => {
-      fetchProperties();
+      fetchFeaturedProperties();
+      fetchRecommendedProperties();
     }, []),
   );
 
-  const fetchProperties = async () => {
-    setLoading(true);
+  const fetchFeaturedProperties = async () => {
+    setFetchingFeatured(true);
 
-    const { data: featuredData } = await supabase
+    const { data: featuredData, error: featuredError } = await supabase
       .from("properties")
       .select("*")
       .eq("is_featured", true)
       .order("created_at", { ascending: false });
 
-    const { data: recommendedData } = await supabase
+    if (featuredError) {
+      console.error("Error fetching featured properties:", featuredError);
+      setFeaturedError("Failed to load featured properties.");
+    }
+
+    setFeatured(featuredData ?? []);
+    setFetchingFeatured(false);
+    setFeaturedError("");
+  };
+
+  const fetchRecommendedProperties = async () => {
+    setFetchingRecommended(true);
+
+    const { data: recommendedData, error: recommendedError } = await supabase
       .from("properties")
       .select("*")
       .eq("is_featured", false)
       .order("created_at", { ascending: false });
 
-    setFeatured(featuredData ?? []);
+    if (recommendedError) {
+      console.error("Error fetching recommended properties:", recommendedError);
+      setRecommendedError("Failed to load recommended properties.");
+    }
     setRecommended(recommendedData ?? []);
-    setLoading(false);
+    setFetchingRecommended(false);
+    setRecommendedError("");
   };
+
+  const recommendedData: RecommendedItem[] = fetchingRecommended
+    ? skeletonData
+    : recommended;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <FlatList
-        data={recommended}
-        keyExtractor={(item) => item.id}
+        data={recommendedData}
+        keyExtractor={(item, index) =>
+          "isSkeleton" in item
+            ? `recommended-skeleton-${index}`
+            : (item as Property).id
+        }
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -106,12 +135,28 @@ const HomeScreen = () => {
                 Featured
               </Text>
 
-              {loading ? (
-                <ActivityIndicator
-                  size="small"
-                  color="#2563EB"
-                  className="py-10"
+              {fetchingFeatured ? (
+                <FlatList
+                  data={[1, 2, 3]}
+                  keyExtractor={(item) => `featured-skeleton-${item}`}
+                  renderItem={() => <FeaturedCardSkeleton />}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20 }}
                 />
+              ) : featuredError ? (
+                <View className="items-center py-10">
+                  <Text className="text-gray-400 text-center">
+                    {featuredError}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={fetchFeaturedProperties}
+                    className="mt-2"
+                  >
+                    <Text className="text-blue-600 text-center">Try again</Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <FlatList
                   data={featured}
@@ -130,15 +175,33 @@ const HomeScreen = () => {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View className="px-5">
-            <PropertyCard property={item} />
-          </View>
-        )}
+        renderItem={({ item }) =>
+          fetchingRecommended ? (
+            <View className="px-5">
+              <PropertyCardSkeleton />
+            </View>
+          ) : (
+            <View className="px-5">
+              <PropertyCard property={item as Property} />
+            </View>
+          )
+        }
         ListEmptyComponent={
-          !loading ? (
+          !fetchingRecommended && !recommendedError ? (
             <View className="items-center py-10">
               <Text className="text-gray-400">No properties found</Text>
+            </View>
+          ) : !fetchingRecommended && recommendedError ? (
+            <View className="items-center py-10">
+              <Text className="text-gray-400 text-center">
+                {recommendedError}
+              </Text>
+              <TouchableOpacity
+                onPress={fetchRecommendedProperties}
+                className="mt-2"
+              >
+                <Text className="text-blue-600 text-center">Try again</Text>
+              </TouchableOpacity>
             </View>
           ) : null
         }
