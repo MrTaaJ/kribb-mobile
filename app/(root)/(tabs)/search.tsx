@@ -1,26 +1,27 @@
+import FilterModal from "@/components/filter-modal";
+import PropertyCard from "@/components/property-card";
+import { supabase } from "@/lib/supabase";
+import { formatPrice } from "@/lib/utils";
+import { useFilterStore } from "@/store/filter-store";
+import { Property } from "@/types";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  FlatList,
   Text,
   TextInput,
-  FlatList,
   TouchableOpacity,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { Property } from "@/types";
-import { useFilterStore } from "@/store/filter-store";
-import { formatPrice } from "@/lib/utils";
-import PropertyCard from "@/components/property-card";
-import FilterModal from "@/components/filter-modal";
-import { useLocalSearchParams } from "expo-router";
 
 const SearchScreen = () => {
-   const [results, setResults] = useState<Property[]>([]);
+  const [results, setResults] = useState<Property[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [error, setError] = useState("");
 
   const { openFilters } = useLocalSearchParams<{ openFilters?: string }>();
 
@@ -68,7 +69,12 @@ const SearchScreen = () => {
     }
 
     if (bedrooms) {
-      query = query.eq("bedrooms", bedrooms);
+      const bedroomsNum = Number(bedrooms);
+      if (bedroomsNum >= 4) {
+        query = query.gte("bedrooms", bedroomsNum);
+      } else {
+        query = query.eq("bedrooms", bedroomsNum);
+      }
     }
 
     if (minPrice) {
@@ -79,14 +85,21 @@ const SearchScreen = () => {
       query = query.lte("price", maxPrice);
     }
 
-    const { data } = await query.order("created_at", { ascending: false });
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
 
-    setResults(data ?? []);
+    if (error) {
+      setError("Failed to fetch property results.");
+    } else {
+      setResults(data ?? []);
+      setError("");
+    }
     setLoading(false);
   };
 
   return (
-      <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
       <View className="px-5 pt-4 pb-3">
         <Text className="text-2xl font-bold text-gray-900 mb-4">
@@ -207,12 +220,18 @@ const SearchScreen = () => {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => <PropertyCard property={item} />}
         ListHeaderComponent={
-          <Text className="text-sm text-gray-400 mb-4">
-            {loading ? "Searching..." : `${results.length} properties found`}
+          <Text
+            className={`text-sm text-gray-400 mb-4 ${error ? "text-red-500" : ""}`}
+          >
+            {loading && !error
+              ? "Searching..."
+              : !loading && error
+                ? "Error fetching results"
+                : `${results.length} properties found`}
           </Text>
         }
         ListEmptyComponent={
-          !loading ? (
+          !loading && !error ? (
             <View className="items-center py-20">
               <Ionicons name="search-outline" size={48} color="#D1D5DB" />
               <Text className="text-gray-400 mt-4 text-base">
@@ -221,6 +240,13 @@ const SearchScreen = () => {
               <Text className="text-gray-300 text-sm mt-1">
                 Try a different search or adjust filters
               </Text>
+            </View>
+          ) : !loading && error ? (
+            <View className="items-center py-10">
+              <Text className="text-gray-400 text-center">{error}</Text>
+              <TouchableOpacity onPress={fetchResults} className="mt-2">
+                <Text className="text-blue-600 text-center">Try again</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <ActivityIndicator size="large" color="#2563EB" className="py-20" />
