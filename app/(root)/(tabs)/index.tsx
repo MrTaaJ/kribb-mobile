@@ -182,7 +182,7 @@ const HomeScreen = () => {
             </View>
           ) : (
             <View className="px-5">
-              <PropertyCard property={item as Property} />
+              <PropertyCard property={item as Property} showSave/>
             </View>
           )
         }
